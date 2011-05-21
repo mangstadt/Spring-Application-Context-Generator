@@ -23,7 +23,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 /**
@@ -51,8 +50,8 @@ public class ApplicationContextGeneratorTest {
 	public void testSpringVersion() throws Exception {
 		ApplicationContextGenerator generator = new ApplicationContextGenerator("2.0");
 		Document document = generator.getDocument();
-		Node root = document.getChildNodes().item(0);
-		String actual = root.getAttributes().getNamedItemNS("http://www.w3.org/2001/XMLSchema-instance", "schemaLocation").getNodeValue();
+		NamedNodeMap attrs = document.getChildNodes().item(0).getAttributes();
+		String actual = attrs.getNamedItemNS("http://www.w3.org/2001/XMLSchema-instance", "schemaLocation").getNodeValue();
 		String expected = "http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd";
 		Assert.assertEquals(expected, actual);
 	}
@@ -86,9 +85,9 @@ public class ApplicationContextGeneratorTest {
 
 		NodeList nodeList = (NodeList) xpath.evaluate("/b:beans/bean", document, XPathConstants.NODESET);
 		Assert.assertEquals(1, nodeList.getLength());
-		Node node = nodeList.item(0);
-		Assert.assertEquals("clazz", node.getAttributes().getNamedItem("id").getNodeValue());
-		Assert.assertEquals("Clazz", node.getAttributes().getNamedItem("class").getNodeValue());
+		NamedNodeMap attrs = nodeList.item(0).getAttributes();
+		Assert.assertEquals("clazz", attrs.getNamedItem("id").getNodeValue());
+		Assert.assertEquals("Clazz", attrs.getNamedItem("class").getNodeValue());
 
 		nodeList = (NodeList) xpath.evaluate("/b:beans/bean/property", document, XPathConstants.NODESET);
 		Assert.assertEquals(0, nodeList.getLength());
@@ -111,9 +110,9 @@ public class ApplicationContextGeneratorTest {
 
 		NodeList nodeList = (NodeList) xpath.evaluate("/b:beans/bean", document, XPathConstants.NODESET);
 		Assert.assertEquals(1, nodeList.getLength());
-		Node node = nodeList.item(0);
-		Assert.assertEquals("clazz", node.getAttributes().getNamedItem("id").getNodeValue());
-		Assert.assertEquals("com.example.Clazz", node.getAttributes().getNamedItem("class").getNodeValue());
+		NamedNodeMap attrs = nodeList.item(0).getAttributes();
+		Assert.assertEquals("clazz", attrs.getNamedItem("id").getNodeValue());
+		Assert.assertEquals("com.example.Clazz", attrs.getNamedItem("class").getNodeValue());
 
 		nodeList = (NodeList) xpath.evaluate("/b:beans/bean[1]/property", document, XPathConstants.NODESET);
 		Assert.assertEquals(0, nodeList.getLength());
@@ -135,18 +134,18 @@ public class ApplicationContextGeneratorTest {
 
 		NodeList nodeList = (NodeList) xpath.evaluate("/b:beans/bean[1]/property", document, XPathConstants.NODESET);
 		Assert.assertEquals(3, nodeList.getLength());
-		Node node = nodeList.item(0);
-		Assert.assertEquals("b", node.getAttributes().getNamedItem("name").getNodeValue());
-		Assert.assertEquals("", node.getAttributes().getNamedItem("value").getNodeValue());
-		Assert.assertEquals(null, node.getAttributes().getNamedItem("ref"));
-		node = nodeList.item(1);
-		Assert.assertEquals("bv", node.getAttributes().getNamedItem("name").getNodeValue());
-		Assert.assertEquals("5", node.getAttributes().getNamedItem("value").getNodeValue());
-		Assert.assertEquals(null, node.getAttributes().getNamedItem("ref"));
-		node = nodeList.item(2);
-		Assert.assertEquals("obj", node.getAttributes().getNamedItem("name").getNodeValue());
-		Assert.assertEquals(null, node.getAttributes().getNamedItem("value"));
-		Assert.assertEquals("anObject", node.getAttributes().getNamedItem("ref").getNodeValue());
+		NamedNodeMap attrs = nodeList.item(0).getAttributes();
+		Assert.assertEquals("b", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertEquals("", attrs.getNamedItem("value").getNodeValue());
+		Assert.assertEquals(null, attrs.getNamedItem("ref"));
+		attrs = nodeList.item(1).getAttributes();
+		Assert.assertEquals("bv", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertEquals("5", attrs.getNamedItem("value").getNodeValue());
+		Assert.assertEquals(null, attrs.getNamedItem("ref"));
+		attrs = nodeList.item(2).getAttributes();
+		Assert.assertEquals("obj", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertEquals(null, attrs.getNamedItem("value"));
+		Assert.assertEquals("anObject", attrs.getNamedItem("ref").getNodeValue());
 	}
 
 	/**
@@ -166,14 +165,14 @@ public class ApplicationContextGeneratorTest {
 
 		NodeList nodeList = (NodeList) xpath.evaluate("/b:beans/bean[1]/property", document, XPathConstants.NODESET);
 		Assert.assertEquals(2, nodeList.getLength());
-		Node node = nodeList.item(0);
-		Assert.assertEquals("foo", node.getAttributes().getNamedItem("name").getNodeValue());
-		Assert.assertEquals("", node.getAttributes().getNamedItem("value").getNodeValue());
-		Assert.assertEquals(null, node.getAttributes().getNamedItem("ref"));
-		node = nodeList.item(1);
-		Assert.assertEquals("bar", node.getAttributes().getNamedItem("name").getNodeValue());
-		Assert.assertEquals(null, node.getAttributes().getNamedItem("value"));
-		Assert.assertEquals("anObject", node.getAttributes().getNamedItem("ref").getNodeValue());
+		NamedNodeMap attrs = nodeList.item(0).getAttributes();
+		Assert.assertEquals("foo", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertEquals("", attrs.getNamedItem("value").getNodeValue());
+		Assert.assertEquals(null, attrs.getNamedItem("ref"));
+		attrs = nodeList.item(1).getAttributes();
+		Assert.assertEquals("bar", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertEquals(null, attrs.getNamedItem("value"));
+		Assert.assertEquals("anObject", attrs.getNamedItem("ref").getNodeValue());
 	}
 
 	/**
