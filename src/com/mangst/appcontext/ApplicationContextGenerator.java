@@ -66,7 +66,8 @@ public class ApplicationContextGenerator {
 			System.out.println("   The directory that the Java source code is located in.");
 			System.out.println("-p=NAME, --package=NAME (required)");
 			System.out.println("   All public classes in the specified packages will be added to the bean");
-			System.out.println("   definition file. Use this parameter multiple times to specify");
+			System.out.println("   definition file. Use this parameter multiple times to specify. Use a blank");
+			System.out.println("   value for the default package (\"-p=\")");
 			System.out.println("   multiple packages.");
 			System.out.println("-v=N, --springVersion=N");
 			System.out.println("   The version of Spring you are using (for specifying the XML schema).");
@@ -87,7 +88,7 @@ public class ApplicationContextGenerator {
 
 		//get the packages
 		Collection<String> packages = arguments.valueList("p", "package");
-		if (packages == null) {
+		if (packages.isEmpty()) {
 			errors.add("At least one package must be specified (example: \"--package=com.example\").  Use a blank value for the default package (example: \"--package=\").");
 		}
 
@@ -100,10 +101,14 @@ public class ApplicationContextGenerator {
 			System.exit(1);
 		}
 
+		//create File objects for each package
 		File sourceDir = new File(source);
 		File packageDirs[] = new File[packages.size()];
 		int i = 0;
 		for (String packageStr : packages) {
+			if (packageStr == null){
+				packageStr = "";
+			}
 			packageStr = packageStr.replaceAll("\\.", File.separator);
 			packageDirs[i] = new File(sourceDir, packageStr);
 			i++;
