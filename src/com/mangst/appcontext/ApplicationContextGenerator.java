@@ -30,10 +30,14 @@ import org.w3c.dom.Element;
 //Generates the XML for a Spring application context file by looking at the source code of the classes you want to inject. 
 //http://static.springsource.org/spring/docs/2.5.x/reference/beans.html
 //http://stackoverflow.com/questions/6060475/spring-xml-from-existing-beans-how
+//TODO support Properties, List, Map 3.3.2.4
+//TODO support public fields like "public int a, b, c;"
+//TODO refactor regex searches into classes so you can do regex.getType() regex.getName(), implement Iterator ?
+//TODO what if: "class Foo{ public class Bar {} }"
 public class ApplicationContextGenerator {
-
 	/**
-	 * @param args
+	 * Runs this utility from the command line.
+	 * @param args the command line arguments
 	 */
 	public static void main(String[] args) throws Exception {
 		Arguments arguments = new Arguments(args);
@@ -92,6 +96,7 @@ public class ApplicationContextGenerator {
 		for (String packageStr : packages) {
 			packageStr = packageStr.replaceAll("\\.", File.separator);
 			packageDirs[i] = new File(sourceDir, packageStr);
+			i++;
 		}
 
 		//generate the application context XML
@@ -102,7 +107,7 @@ public class ApplicationContextGenerator {
 
 			//iterate over each file
 			for (File file : files) {
-				generator.processSourceFile(new FileReader(file));
+				generator.addBean(new FileReader(file));
 			}
 		}
 		Document document = generator.getDocument();
@@ -121,7 +126,7 @@ public class ApplicationContextGenerator {
 		}
 		System.out.println(xmlString);
 	}
-	
+
 	/**
 	 * A file filter that only returns .java files.
 	 * @author mangstadt
@@ -133,23 +138,50 @@ public class ApplicationContextGenerator {
 		}
 	}
 
+	/**
+	 * Regex that is used to find the class' package.
+	 */
 	private static final Pattern packageRegex = Pattern.compile("^\\s*package\\s+(.*?)\\s*;", Pattern.DOTALL);
+
+	/**
+	 * Regex that is used to find the class' name.
+	 */
 	private static final Pattern classNameRegex = Pattern.compile("public\\s+class\\s+(\\w+)");
+
+	/**
+	 * Regex that is used to pull parameters out of a method's parameter list.
+	 */
 	private static final Pattern parameterRegex = Pattern.compile("([a-zA-Z_0-9<>\\.]+)\\s+(\\w+)");
+
+	/**
+	 * Regex that is used to find a class' setter methods.
+	 */
 	private static final Pattern setterRegex = Pattern.compile("public\\s+\\w+\\s+set(\\w+)\\s*\\(\\s*(\\w+)\\s+\\w+\\s*\\)");
+
+	/**
+	 * Regex that is used to find a class' public fields.
+	 */
 	private static final Pattern publicFieldRegex = Pattern.compile("public\\s+(\\w+)\\s+(\\w+)(\\s*=\\s*(.*?))?;", Pattern.DOTALL);
+
+	/**
+	 * The list of Java primative types.
+	 */
 	private static final List<String> primatives = Arrays.asList(new String[] { "byte", "short", "char", "int", "long", "float", "double", "boolean" });
+
+	/**
+	 * The list of Java wrapper classes (includes String).
+	 */
 	private static final List<String> wrappers = Arrays.asList(new String[] { "Byte", "Short", "Character", "Integer", "Long", "Float", "Double", "Boolean", "String" });
 
 	/**
 	 * The XML document.
 	 */
-	private Document document;
+	private final Document document;
 
 	/**
 	 * The XML root element.
 	 */
-	private Element root;
+	private final Element root;
 
 	/**
 	 * Constructs a new application context generator.
@@ -165,7 +197,7 @@ public class ApplicationContextGenerator {
 			//never thrown in my case, so ignore it
 		}
 		document = docBuilder.newDocument();
-		
+
 		//create the root element
 		root = document.createElementNS("http://www.springframework.org/schema/beans", "beans");
 		root.setAttributeNS("http://www.w3.org/2001/XMLSchema-instance", "schemaLocation", "http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-" + springVersion + ".xsd");
@@ -181,13 +213,14 @@ public class ApplicationContextGenerator {
 	}
 
 	/**
-	 * Adds the class contained within the specified file to the application
-	 * context.
-	 * @param reader the input stream to the file (it is closed)
+	 * Adds a bean to the application context using a Java source file. Only
+	 * public classes are added.
+	 * @param reader the input stream to the Java source file (this is closed
+	 * after it is read)
 	 * @return this
 	 * @throws IOException if there's a problem reading the file
 	 */
-	public ApplicationContextGenerator processSourceFile(Reader reader) throws IOException {
+	public ApplicationContextGenerator addBean(Reader reader) throws IOException {
 		String contentsString = getFileContents(reader);
 
 		//build a "bean" element for each class
@@ -222,44 +255,44 @@ public class ApplicationContextGenerator {
 		}
 	}
 
-	private Element buildBeanElement(String contentsString) {
-		//TODO: look at constructor too
-		//if there is a default constructor, don't generate <constructor-args>
-		//if there is not a default constructor and exactly one non-default construct, generate <constructor-args>
-		//if there is not a default constrcutor and more than one non-default constructor, leave a comment in the XML and output a warning?
-
-		//get the name of the package
-		String packageName = null;
-		Matcher matcher = packageRegex.matcher(contentsString);
-		if (matcher.find()) {
-			packageName = matcher.group(1);
-		}
-
+	/**
+	 * Creates the &lt;bean /&gt; element.
+	 * @param javaSource the Java source code
+	 * @return the &lt;bean /&gt; element or null if there were no public classes.
+	 */
+	private Element buildBeanElement(String javaSource) {
+		Matcher matcher;
+		
 		//get the name of the class
 		String className = null;
-		matcher = classNameRegex.matcher(contentsString);
+		matcher = classNameRegex.matcher(javaSource);
 		if (matcher.find()) {
 			className = matcher.group(1);
 		} else {
 			return null;
+		}
+		
+		//get the name of the package
+		String packageName = null;
+		matcher = packageRegex.matcher(javaSource);
+		if (matcher.find()) {
+			packageName = matcher.group(1);
 		}
 
 		//create <bean /> element
 		Element beanElement = document.createElement("bean");
 		String classNameLower = className.substring(0, 1).toLowerCase() + className.substring(1);
 		beanElement.setAttribute("id", classNameLower);
-		if (packageName != null) {
-			//if it's not in the default package
-			beanElement.setAttribute("class", packageName + "." + className);
-		}
+		String classAttr = (packageName == null) ? className : packageName + "." + className;
+		beanElement.setAttribute("class", classAttr);
 
 		//create <constructor-arg /> elements
-		Pattern constructorRegex = Pattern.compile("public\\s+" + className + "\\s+\\((.*?)\\)");
-		matcher = constructorRegex.matcher(contentsString);
+		Pattern constructorRegex = Pattern.compile("public\\s+" + className + "\\s*\\(\\s*(.*?)\\s*\\)");
+		matcher = constructorRegex.matcher(javaSource);
 		List<String> constructors = new ArrayList<String>();
 		boolean defaultConstructor = false;
 		while (matcher.find()) {
-			String parameters = matcher.group(1).trim();
+			String parameters = matcher.group(1);
 			if (parameters.isEmpty()) {
 				//there is a default constructor, so we won't create <constructor-arg /> elements
 				defaultConstructor = true;
@@ -269,12 +302,11 @@ public class ApplicationContextGenerator {
 		}
 		if (!defaultConstructor && constructors.size() == 1) {
 			//if there is only one constructor and that constructor is not a default constructor, then generate the <constructor-arg /> elements
-			//TODO take into account the fact that the parameter types might be fully-qualified
 			matcher = parameterRegex.matcher(constructors.get(0));
 			int index = 0;
 			while (matcher.find()) {
 				String type = matcher.group(1);
-				String name = matcher.group(2);
+				//String name = matcher.group(2);
 
 				Element constructorArgElement = document.createElement("constructor-arg");
 
@@ -285,7 +317,8 @@ public class ApplicationContextGenerator {
 					constructorArgElement.setAttribute("type", type);
 					constructorArgElement.setAttribute("value", "");
 				} else {
-					constructorArgElement.setAttribute("ref", name);
+					String typeLower = type.substring(0, 1).toLowerCase() + type.substring(1);
+					constructorArgElement.setAttribute("ref", typeLower);
 				}
 
 				constructorArgElement.setAttribute("index", index + "");
@@ -296,7 +329,7 @@ public class ApplicationContextGenerator {
 		}
 
 		//generate <property /> elements from public fields
-		matcher = publicFieldRegex.matcher(contentsString);
+		matcher = publicFieldRegex.matcher(javaSource);
 		while (matcher.find()) {
 			String type = matcher.group(1);
 			String name = matcher.group(2);
@@ -314,7 +347,7 @@ public class ApplicationContextGenerator {
 		}
 
 		//generate <property /> elements from setters
-		matcher = setterRegex.matcher(contentsString);
+		matcher = setterRegex.matcher(javaSource);
 		while (matcher.find()) {
 			String name = matcher.group(1);
 			String type = matcher.group(2);

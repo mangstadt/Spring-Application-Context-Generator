@@ -82,10 +82,10 @@ public class Arguments {
 	 */
 	public String value(String shortArg, String longArg, String defaultValue) {
 		Collection<String> values = valueList(shortArg, longArg, defaultValue);
-		if (values != null) {
-			return values.iterator().next();
+		if (values.isEmpty()){
+			return null;
 		}
-		return null;
+		return values.iterator().next();
 	}
 
 	/**
@@ -116,14 +116,19 @@ public class Arguments {
 	 */
 	@SuppressWarnings("unchecked")
 	public Collection<String> valueList(String shortArg, String longArg, String defaultValue) {
-		Collection<String> values = (Collection<String>) args.getCollection(shortArg);
-		if (values == null) {
-			values = (Collection<String>) args.getCollection(longArg);
-		}
-
-		if (values == null && defaultValue != null) {
-			values = new ArrayList<String>();
+		Collection<String> shortArgValues = (Collection<String>) args.getCollection(shortArg);
+		Collection<String> longArgValues = (Collection<String>) args.getCollection(longArg);
+		
+		Collection<String> values = new ArrayList<String>();
+		if (shortArgValues == null && longArgValues == null && defaultValue != null) {
 			values.add(defaultValue);
+		} else {
+			if (shortArgValues != null) {
+				values.addAll(shortArgValues);
+			}
+			if (longArgValues != null) {
+				values.addAll(longArgValues);
+			}
 		}
 		return values;
 	}
