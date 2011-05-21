@@ -6,9 +6,9 @@ Generates the bean definitions for a Spring XML application context file from th
     
 It creates:
 
- *   A <bean /> element for each public class
- *   A <property /> element for each public field and public setter method.
- *   A list of <constructor-arg /> elements if (1) there is only one constructor and (2) that constructor is not the default constructor.
+ *   A `<bean />` element for each public class
+ *   A `<property />` element for each public field and public setter method.
+ *   A list of `<constructor-arg />` elements if (1) there is only one constructor and (2) that constructor is not the default constructor.
 
 # Command line arguments
 
