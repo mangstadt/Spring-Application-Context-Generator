@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -371,67 +372,58 @@ public class ApplicationContextGenerator {
 				beanElement.appendChild(constructorArgElement);
 			}
 		}
-
-		//generate <property /> elements from public fields
+		
+		//get all the class' properties from the public fields and setter methods.
+		List<ClassProperty> properties = new ArrayList<ClassProperty>();
 		matcher = publicFieldRegex.matcher(javaSource);
 		while (matcher.find()) {
-			String type = matcher.group(1);
-			String name = matcher.group(2);
-			String value = matcher.group(4);
-
-			Element propertyElement = document.createElement("property");
-			propertyElement.setAttribute("name", name);
-			if (primatives.contains(type) || wrappers.contains(type)) {
-				propertyElement.setAttribute("value", value);
-			} else if ("List".equals(type) || "java.util.List".equals(type)){
-				Element listElement = document.createElement("list");
-				propertyElement.appendChild(listElement);
-			} else if ("Set".equals(type) || "java.util.Set".equals(type)){
-				Element listElement = document.createElement("set");
-				propertyElement.appendChild(listElement);
-			} else if ("Map".equals(type) || "java.util.Map".equals(type)){
-				Element listElement = document.createElement("map");
-				propertyElement.appendChild(listElement);
-			} else if ("Properties".equals(type) || "java.util.Properties".equals(type)){
-				Element listElement = document.createElement("props");
-				propertyElement.appendChild(listElement);
-			} else {
-				String typeLower = type.substring(0, 1).toLowerCase() + type.substring(1);
-				propertyElement.setAttribute("ref", typeLower);
-			}
-			beanElement.appendChild(propertyElement);
+			ClassProperty p = new ClassProperty();
+			p.type = matcher.group(1);
+			p.name = matcher.group(2);
+			p.value = matcher.group(4);
+			properties.add(p);
 		}
-
-		//generate <property /> elements from setters
 		matcher = setterRegex.matcher(javaSource);
 		while (matcher.find()) {
+			ClassProperty p = new ClassProperty();
 			String name = matcher.group(1);
-			String type = matcher.group(2);
-
+			p.name = name.substring(0, 1).toLowerCase() + name.substring(1); //the first letter will be upper-cased, ("setFoo"), so lower-case it
+			p.type = matcher.group(2);
+			p.value = "";
+			properties.add(p);
+		}
+		
+		//add all properties as <property /> elements
+		for (ClassProperty p : properties){
 			Element propertyElement = document.createElement("property");
-			name = name.substring(0, 1).toLowerCase() + name.substring(1);
-			propertyElement.setAttribute("name", name);
-			if (primatives.contains(type) || wrappers.contains(type)) {
-				propertyElement.setAttribute("value", "");
-			} else if ("List".equals(type) || "java.util.List".equals(type)){
+			propertyElement.setAttribute("name", p.name);
+			if (primatives.contains(p.type) || wrappers.contains(p.type)) {
+				propertyElement.setAttribute("value", p.value);
+			} else if ("List".equals(p.type) || "java.util.List".equals(p.type)){
 				Element listElement = document.createElement("list");
 				propertyElement.appendChild(listElement);
-			} else if ("Set".equals(type) || "java.util.Set".equals(type)){
+			} else if ("Set".equals(p.type) || "java.util.Set".equals(p.type)){
 				Element listElement = document.createElement("set");
 				propertyElement.appendChild(listElement);
-			} else if ("Map".equals(type) || "java.util.Map".equals(type)){
+			} else if ("Map".equals(p.type) || "java.util.Map".equals(p.type)){
 				Element listElement = document.createElement("map");
 				propertyElement.appendChild(listElement);
-			} else if ("Properties".equals(type) || "java.util.Properties".equals(type)){
+			} else if ("Properties".equals(p.type) || "java.util.Properties".equals(p.type)){
 				Element listElement = document.createElement("props");
 				propertyElement.appendChild(listElement);
 			} else {
-				String typeLower = type.substring(0, 1).toLowerCase() + type.substring(1);
+				String typeLower = p.type.substring(0, 1).toLowerCase() + p.type.substring(1);
 				propertyElement.setAttribute("ref", typeLower);
 			}
 			beanElement.appendChild(propertyElement);
 		}
 
 		return beanElement;
+	}
+	
+	private class ClassProperty{
+		public String name;
+		public String type;
+		public String value;
 	}
 }
