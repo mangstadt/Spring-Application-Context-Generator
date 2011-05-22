@@ -128,13 +128,13 @@ public class ApplicationContextGeneratorTest {
 	@Test
 	public void testPublicField() throws Exception {
 		ApplicationContextGenerator generator = new ApplicationContextGenerator("2.0");
-		String source = "public class Clazz{ private int hidden; public byte b; public byte bv = 5; public AnObject obj;}";
+		String source = "public class Clazz{ private int hidden; public byte b; public byte bv = 5; public AnObject obj; public long num = 56L; public String str = \"foo\";}";
 		StringReader reader = new StringReader(source);
 		generator.addBean(reader);
 		Document document = generator.getDocument();
 
 		NodeList nodeList = (NodeList) xpath.evaluate("/b:beans/bean[1]/property", document, XPathConstants.NODESET);
-		Assert.assertEquals(3, nodeList.getLength());
+		Assert.assertEquals(5, nodeList.getLength());
 		NamedNodeMap attrs = nodeList.item(0).getAttributes();
 		Assert.assertEquals("b", attrs.getNamedItem("name").getNodeValue());
 		Assert.assertEquals("", attrs.getNamedItem("value").getNodeValue());
@@ -147,6 +147,14 @@ public class ApplicationContextGeneratorTest {
 		Assert.assertEquals("obj", attrs.getNamedItem("name").getNodeValue());
 		Assert.assertEquals(null, attrs.getNamedItem("value"));
 		Assert.assertEquals("anObject", attrs.getNamedItem("ref").getNodeValue());
+		attrs = nodeList.item(3).getAttributes();
+		Assert.assertEquals("num", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertEquals("56", attrs.getNamedItem("value").getNodeValue());
+		Assert.assertEquals(null, attrs.getNamedItem("ref"));
+		attrs = nodeList.item(4).getAttributes();
+		Assert.assertEquals("str", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertEquals("foo", attrs.getNamedItem("value").getNodeValue());
+		Assert.assertEquals(null, attrs.getNamedItem("ref"));
 	}
 
 	/**

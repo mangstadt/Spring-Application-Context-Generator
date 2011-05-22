@@ -12,7 +12,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -205,7 +204,7 @@ public class ApplicationContextGenerator {
 	/**
 	 * Regex that is used to find a class' public fields.
 	 */
-	private static final Pattern publicFieldRegex = Pattern.compile("public\\s+([a-zA-Z_0-9\\.]+)\\s+(\\w+)(\\s*=\\s*(.*?))?;", Pattern.DOTALL);
+	private static final Pattern publicFieldRegex = Pattern.compile("public\\s+([a-zA-Z_0-9\\.]+)\\s+(\\w+)\\s*(=\\s*(.*?))?;", Pattern.DOTALL);
 
 	/**
 	 * The list of Java primative types.
@@ -372,7 +371,7 @@ public class ApplicationContextGenerator {
 				beanElement.appendChild(constructorArgElement);
 			}
 		}
-		
+
 		//get all the class' properties from the public fields and setter methods.
 		List<ClassProperty> properties = new ArrayList<ClassProperty>();
 		matcher = publicFieldRegex.matcher(javaSource);
@@ -380,7 +379,25 @@ public class ApplicationContextGenerator {
 			ClassProperty p = new ClassProperty();
 			p.type = matcher.group(1);
 			p.name = matcher.group(2);
-			p.value = matcher.group(4);
+
+			String value = matcher.group(4);
+			if (value == null) {
+				value = "";
+			} else {
+				value = value.trim();
+			}
+			if (value.startsWith("\"")) {
+				//remove the quotes that surround Strings
+				value = value.substring(1, value.length() - 1);
+			} else if (value.startsWith("'")) {
+				//remove the quotes that surround characters
+				value = value.substring(1, value.length() - 1);
+			} else if (value.endsWith("d") || value.endsWith("D") || value.endsWith("f") || value.endsWith("F") || value.endsWith("l") || value.endsWith("L")) {
+				//remove the "double", "float", or "long" letters if they are there
+				value = value.substring(0, value.length() - 1);
+			}
+			p.value = value;
+
 			properties.add(p);
 		}
 		matcher = setterRegex.matcher(javaSource);
@@ -392,23 +409,23 @@ public class ApplicationContextGenerator {
 			p.value = "";
 			properties.add(p);
 		}
-		
+
 		//add all properties as <property /> elements
-		for (ClassProperty p : properties){
+		for (ClassProperty p : properties) {
 			Element propertyElement = document.createElement("property");
 			propertyElement.setAttribute("name", p.name);
 			if (primatives.contains(p.type) || wrappers.contains(p.type)) {
 				propertyElement.setAttribute("value", p.value);
-			} else if ("List".equals(p.type) || "java.util.List".equals(p.type)){
+			} else if ("List".equals(p.type) || "java.util.List".equals(p.type)) {
 				Element listElement = document.createElement("list");
 				propertyElement.appendChild(listElement);
-			} else if ("Set".equals(p.type) || "java.util.Set".equals(p.type)){
+			} else if ("Set".equals(p.type) || "java.util.Set".equals(p.type)) {
 				Element listElement = document.createElement("set");
 				propertyElement.appendChild(listElement);
-			} else if ("Map".equals(p.type) || "java.util.Map".equals(p.type)){
+			} else if ("Map".equals(p.type) || "java.util.Map".equals(p.type)) {
 				Element listElement = document.createElement("map");
 				propertyElement.appendChild(listElement);
-			} else if ("Properties".equals(p.type) || "java.util.Properties".equals(p.type)){
+			} else if ("Properties".equals(p.type) || "java.util.Properties".equals(p.type)) {
 				Element listElement = document.createElement("props");
 				propertyElement.appendChild(listElement);
 			} else {
@@ -420,8 +437,8 @@ public class ApplicationContextGenerator {
 
 		return beanElement;
 	}
-	
-	private class ClassProperty{
+
+	private class ClassProperty {
 		public String name;
 		public String type;
 		public String value;
