@@ -21,5 +21,8 @@ It creates:
     -v=N, --springVersion=N
        The version of Spring you are using (for specifying the XML schema).
        (defaults to "2.5")
+    -r, --recurse
+       Recurse into sub-packages (example: specifying "-r -p=com.foo" will also
+       include "com.foo.bar").
     -h, --help
        Displays this help message.
