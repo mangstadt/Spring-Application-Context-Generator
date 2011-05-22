@@ -30,7 +30,6 @@ import org.w3c.dom.Element;
 
 //http://static.springsource.org/spring/docs/2.5.x/reference/beans.html
 //http://stackoverflow.com/questions/6060475/spring-xml-from-existing-beans-how
-//TODO support Properties, List, Map 3.3.2.4
 //TODO support public fields like "public int a, b, c;"
 //TODO refactor regex searches into classes so you can do regex.getType() regex.getName(), implement Iterator ?
 //TODO what if: "class Foo{ public class Bar {} }"
@@ -200,12 +199,12 @@ public class ApplicationContextGenerator {
 	/**
 	 * Regex that is used to find a class' setter methods.
 	 */
-	private static final Pattern setterRegex = Pattern.compile("public\\s+\\w+\\s+set(\\w+)\\s*\\(\\s*(\\w+)\\s+\\w+\\s*\\)");
+	private static final Pattern setterRegex = Pattern.compile("public\\s+\\w+\\s+set(\\w+)\\s*\\(\\s*([a-zA-Z_0-9\\.]+)\\s+\\w+\\s*\\)");
 
 	/**
 	 * Regex that is used to find a class' public fields.
 	 */
-	private static final Pattern publicFieldRegex = Pattern.compile("public\\s+(\\w+)\\s+(\\w+)(\\s*=\\s*(.*?))?;", Pattern.DOTALL);
+	private static final Pattern publicFieldRegex = Pattern.compile("public\\s+([a-zA-Z_0-9\\.]+)\\s+(\\w+)(\\s*=\\s*(.*?))?;", Pattern.DOTALL);
 
 	/**
 	 * The list of Java primative types.
@@ -384,6 +383,18 @@ public class ApplicationContextGenerator {
 			propertyElement.setAttribute("name", name);
 			if (primatives.contains(type) || wrappers.contains(type)) {
 				propertyElement.setAttribute("value", value);
+			} else if ("List".equals(type) || "java.util.List".equals(type)){
+				Element listElement = document.createElement("list");
+				propertyElement.appendChild(listElement);
+			} else if ("Set".equals(type) || "java.util.Set".equals(type)){
+				Element listElement = document.createElement("set");
+				propertyElement.appendChild(listElement);
+			} else if ("Map".equals(type) || "java.util.Map".equals(type)){
+				Element listElement = document.createElement("map");
+				propertyElement.appendChild(listElement);
+			} else if ("Properties".equals(type) || "java.util.Properties".equals(type)){
+				Element listElement = document.createElement("props");
+				propertyElement.appendChild(listElement);
 			} else {
 				String typeLower = type.substring(0, 1).toLowerCase() + type.substring(1);
 				propertyElement.setAttribute("ref", typeLower);
@@ -402,6 +413,18 @@ public class ApplicationContextGenerator {
 			propertyElement.setAttribute("name", name);
 			if (primatives.contains(type) || wrappers.contains(type)) {
 				propertyElement.setAttribute("value", "");
+			} else if ("List".equals(type) || "java.util.List".equals(type)){
+				Element listElement = document.createElement("list");
+				propertyElement.appendChild(listElement);
+			} else if ("Set".equals(type) || "java.util.Set".equals(type)){
+				Element listElement = document.createElement("set");
+				propertyElement.appendChild(listElement);
+			} else if ("Map".equals(type) || "java.util.Map".equals(type)){
+				Element listElement = document.createElement("map");
+				propertyElement.appendChild(listElement);
+			} else if ("Properties".equals(type) || "java.util.Properties".equals(type)){
+				Element listElement = document.createElement("props");
+				propertyElement.appendChild(listElement);
 			} else {
 				String typeLower = type.substring(0, 1).toLowerCase() + type.substring(1);
 				propertyElement.setAttribute("ref", typeLower);
