@@ -10,7 +10,9 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,14 +28,20 @@ import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-//Spring Application Context Generator
-//Generates the XML for a Spring application context file by looking at the source code of the classes you want to inject. 
 //http://static.springsource.org/spring/docs/2.5.x/reference/beans.html
 //http://stackoverflow.com/questions/6060475/spring-xml-from-existing-beans-how
 //TODO support Properties, List, Map 3.3.2.4
 //TODO support public fields like "public int a, b, c;"
 //TODO refactor regex searches into classes so you can do regex.getType() regex.getName(), implement Iterator ?
 //TODO what if: "class Foo{ public class Bar {} }"
+//TODO handle arrays ("public String[] strs;", "public void setFoo(String[] foo){}"
+//TODO ignore comments!
+/**
+ * Spring Application Context Generator.<br>
+ * Generates the bean definitions for a Spring XML application context file from
+ * the source code of Java classes.
+ * @author mangst
+ */
 public class ApplicationContextGenerator {
 	/**
 	 * Runs this utility from the command line.
@@ -41,7 +49,6 @@ public class ApplicationContextGenerator {
 	 */
 	public static void main(String[] args) throws Exception {
 		Arguments arguments = new Arguments(args);
-		List<String> errors = new ArrayList<String>();
 
 		//display help message
 		if (arguments.exists("h", "--help")) {
@@ -72,10 +79,15 @@ public class ApplicationContextGenerator {
 			System.out.println("-v=N, --springVersion=N");
 			System.out.println("   The version of Spring you are using (for specifying the XML schema).");
 			System.out.println("   (defaults to \"2.5\")");
+			System.out.println("-r, --recurse");
+			System.out.println("   Recurse into sub-packages (example: specifying \"-r -p=com.foo\" will also");
+			System.out.println("   include \"com.foo.bar\").");
 			System.out.println("-h, --help");
 			System.out.println("   Displays this help message.");
 			System.exit(0);
 		}
+
+		List<String> errors = new ArrayList<String>();
 
 		//get the source directory
 		String source = arguments.value("s", "source");
@@ -92,6 +104,9 @@ public class ApplicationContextGenerator {
 			errors.add("At least one package must be specified (example: \"--package=com.example\").  Use a blank value for the default package (example: \"--package=\").");
 		}
 
+		//recurse into sub-packages?
+		boolean recurse = arguments.exists("r", "recurse");
+
 		//display an error message if any of the required fields were not specified
 		if (!errors.isEmpty()) {
 			for (String error : errors) {
@@ -103,26 +118,30 @@ public class ApplicationContextGenerator {
 
 		//create File objects for each package
 		File sourceDir = new File(source);
-		File packageDirs[] = new File[packages.size()];
-		int i = 0;
+		Queue<File> packageDirs = new LinkedList<File>();
 		for (String packageStr : packages) {
-			if (packageStr == null){
+			if (packageStr == null) {
 				packageStr = "";
 			}
 			packageStr = packageStr.replaceAll("\\.", File.separator);
-			packageDirs[i] = new File(sourceDir, packageStr);
-			i++;
+			packageDirs.add(new File(sourceDir, packageStr));
 		}
 
 		//generate the application context XML
 		ApplicationContextGenerator generator = new ApplicationContextGenerator(springVersion);
 		JavaFileFilter javaFileFilter = new JavaFileFilter();
-		for (File directory : packageDirs) {
+		while (!packageDirs.isEmpty()) {
+			File directory = packageDirs.poll();
 			File files[] = directory.listFiles(javaFileFilter);
 
 			//iterate over each file
 			for (File file : files) {
-				generator.addBean(new FileReader(file));
+				if (recurse && file.isDirectory()) {
+					//if recurse is on, append this directory to the list of packages
+					packageDirs.add(file);
+				} else if (file.isFile()) {
+					generator.addBean(new FileReader(file));
+				}
 			}
 		}
 		Document document = generator.getDocument();
@@ -143,13 +162,23 @@ public class ApplicationContextGenerator {
 	}
 
 	/**
-	 * A file filter that only returns .java files.
+	 * A file filter that only returns directories and .java files.
 	 * @author mangstadt
 	 */
 	private static class JavaFileFilter implements FileFilter {
 		@Override
 		public boolean accept(File file) {
-			return file.isFile() && file.getName().endsWith(".java");
+			//ignore SVN directories
+			if (file.isDirectory() && !file.getName().equals(".svn")) {
+				return true;
+			}
+
+			//include all Java files
+			if (file.getName().endsWith(".java")) {
+				return true;
+			}
+
+			return false;
 		}
 	}
 
@@ -273,11 +302,12 @@ public class ApplicationContextGenerator {
 	/**
 	 * Creates the &lt;bean /&gt; element.
 	 * @param javaSource the Java source code
-	 * @return the &lt;bean /&gt; element or null if there were no public classes.
+	 * @return the &lt;bean /&gt; element or null if there were no public
+	 * classes.
 	 */
 	private Element buildBeanElement(String javaSource) {
 		Matcher matcher;
-		
+
 		//get the name of the class
 		String className = null;
 		matcher = classNameRegex.matcher(javaSource);
@@ -286,7 +316,7 @@ public class ApplicationContextGenerator {
 		} else {
 			return null;
 		}
-		
+
 		//get the name of the package
 		String packageName = null;
 		matcher = packageRegex.matcher(javaSource);
