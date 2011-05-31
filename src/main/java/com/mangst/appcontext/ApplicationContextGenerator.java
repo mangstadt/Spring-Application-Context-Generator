@@ -51,7 +51,7 @@ public class ApplicationContextGenerator {
 		Arguments arguments = new Arguments(args);
 
 		//display help message
-		if (arguments.exists("h", "--help")) {
+		if (arguments.exists("h", "help")) {
 			System.out.println("Spring Application Context Generator");
 			System.out.println("by Michael Angstadt - github.com/mangstadt");
 			System.out.println();
@@ -64,7 +64,7 @@ public class ApplicationContextGenerator {
 			System.out.println("   and (2) that constructor is not the default constructor.");
 			System.out.println();
 			System.out.println("Example");
-			System.out.println("java com.mangst.appcontext.ApplicationContextGenerator \\");
+			System.out.println("java -jar appcontext.jar \\");
 			System.out.println(" --source=path/to/src \\");
 			System.out.println(" --package=com.example.foo --package=com.example.bar");
 			System.out.println();
@@ -96,7 +96,7 @@ public class ApplicationContextGenerator {
 		}
 
 		//get the Spring version
-		String springVersion = arguments.value("v", "--springVersion", "2.5");
+		String springVersion = arguments.value("v", "springVersion", "2.5");
 
 		//get the packages
 		Collection<String> packages = arguments.valueList("p", "package");
