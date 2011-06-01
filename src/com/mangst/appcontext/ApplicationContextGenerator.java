@@ -50,7 +50,7 @@ public class ApplicationContextGenerator {
 		Arguments arguments = new Arguments(args);
 
 		//display help message
-		if (arguments.exists("h", "--help")) {
+		if (arguments.exists("h", "help")) {
 			System.out.println("Spring Application Context Generator");
 			System.out.println("by Michael Angstadt - github.com/mangstadt");
 			System.out.println();
@@ -95,7 +95,7 @@ public class ApplicationContextGenerator {
 		}
 
 		//get the Spring version
-		String springVersion = arguments.value("v", "--springVersion", "2.5");
+		String springVersion = arguments.value("v", "springVersion", "2.5");
 
 		//get the packages
 		Collection<String> packages = arguments.valueList("p", "package");
