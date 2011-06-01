@@ -30,7 +30,6 @@ import org.w3c.dom.Element;
 
 //http://static.springsource.org/spring/docs/2.5.x/reference/beans.html
 //http://stackoverflow.com/questions/6060475/spring-xml-from-existing-beans-how
-//TODO support Properties, List, Map 3.3.2.4
 //TODO support public fields like "public int a, b, c;"
 //TODO refactor regex searches into classes so you can do regex.getType() regex.getName(), implement Iterator ?
 //TODO what if: "class Foo{ public class Bar {} }"
@@ -200,12 +199,12 @@ public class ApplicationContextGenerator {
 	/**
 	 * Regex that is used to find a class' setter methods.
 	 */
-	private static final Pattern setterRegex = Pattern.compile("public\\s+\\w+\\s+set(\\w+)\\s*\\(\\s*(\\w+)\\s+\\w+\\s*\\)");
+	private static final Pattern setterRegex = Pattern.compile("public\\s+\\w+\\s+set(\\w+)\\s*\\(\\s*([a-zA-Z_0-9\\.]+)\\s+\\w+\\s*\\)");
 
 	/**
 	 * Regex that is used to find a class' public fields.
 	 */
-	private static final Pattern publicFieldRegex = Pattern.compile("public\\s+(\\w+)\\s+(\\w+)(\\s*=\\s*(.*?))?;", Pattern.DOTALL);
+	private static final Pattern publicFieldRegex = Pattern.compile("public\\s+([a-zA-Z_0-9\\.]+)\\s+(\\w+)\\s*(=\\s*(.*?))?;", Pattern.DOTALL);
 
 	/**
 	 * The list of Java primative types.
@@ -373,42 +372,75 @@ public class ApplicationContextGenerator {
 			}
 		}
 
-		//generate <property /> elements from public fields
+		//get all the class' properties from the public fields and setter methods.
+		List<ClassProperty> properties = new ArrayList<ClassProperty>();
 		matcher = publicFieldRegex.matcher(javaSource);
 		while (matcher.find()) {
-			String type = matcher.group(1);
-			String name = matcher.group(2);
+			ClassProperty p = new ClassProperty();
+			p.type = matcher.group(1);
+			p.name = matcher.group(2);
+
 			String value = matcher.group(4);
-
-			Element propertyElement = document.createElement("property");
-			propertyElement.setAttribute("name", name);
-			if (primatives.contains(type) || wrappers.contains(type)) {
-				propertyElement.setAttribute("value", value);
+			if (value == null) {
+				value = "";
 			} else {
-				String typeLower = type.substring(0, 1).toLowerCase() + type.substring(1);
-				propertyElement.setAttribute("ref", typeLower);
+				value = value.trim();
 			}
-			beanElement.appendChild(propertyElement);
-		}
+			if (value.startsWith("\"")) {
+				//remove the quotes that surround Strings
+				value = value.substring(1, value.length() - 1);
+			} else if (value.startsWith("'")) {
+				//remove the quotes that surround characters
+				value = value.substring(1, value.length() - 1);
+			} else if (value.endsWith("d") || value.endsWith("D") || value.endsWith("f") || value.endsWith("F") || value.endsWith("l") || value.endsWith("L")) {
+				//remove the "double", "float", or "long" letters if they are there
+				value = value.substring(0, value.length() - 1);
+			}
+			p.value = value;
 
-		//generate <property /> elements from setters
+			properties.add(p);
+		}
 		matcher = setterRegex.matcher(javaSource);
 		while (matcher.find()) {
+			ClassProperty p = new ClassProperty();
 			String name = matcher.group(1);
-			String type = matcher.group(2);
+			p.name = name.substring(0, 1).toLowerCase() + name.substring(1); //the first letter will be upper-cased, ("setFoo"), so lower-case it
+			p.type = matcher.group(2);
+			p.value = "";
+			properties.add(p);
+		}
 
+		//add all properties as <property /> elements
+		for (ClassProperty p : properties) {
 			Element propertyElement = document.createElement("property");
-			name = name.substring(0, 1).toLowerCase() + name.substring(1);
-			propertyElement.setAttribute("name", name);
-			if (primatives.contains(type) || wrappers.contains(type)) {
-				propertyElement.setAttribute("value", "");
+			propertyElement.setAttribute("name", p.name);
+			if (primatives.contains(p.type) || wrappers.contains(p.type)) {
+				propertyElement.setAttribute("value", p.value);
+			} else if ("List".equals(p.type) || "java.util.List".equals(p.type)) {
+				Element listElement = document.createElement("list");
+				propertyElement.appendChild(listElement);
+			} else if ("Set".equals(p.type) || "java.util.Set".equals(p.type)) {
+				Element listElement = document.createElement("set");
+				propertyElement.appendChild(listElement);
+			} else if ("Map".equals(p.type) || "java.util.Map".equals(p.type)) {
+				Element listElement = document.createElement("map");
+				propertyElement.appendChild(listElement);
+			} else if ("Properties".equals(p.type) || "java.util.Properties".equals(p.type)) {
+				Element listElement = document.createElement("props");
+				propertyElement.appendChild(listElement);
 			} else {
-				String typeLower = type.substring(0, 1).toLowerCase() + type.substring(1);
+				String typeLower = p.type.substring(0, 1).toLowerCase() + p.type.substring(1);
 				propertyElement.setAttribute("ref", typeLower);
 			}
 			beanElement.appendChild(propertyElement);
 		}
 
 		return beanElement;
+	}
+
+	private class ClassProperty {
+		public String name;
+		public String type;
+		public String value;
 	}
 }

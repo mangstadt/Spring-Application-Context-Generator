@@ -23,6 +23,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 /**
@@ -127,13 +128,13 @@ public class ApplicationContextGeneratorTest {
 	@Test
 	public void testPublicField() throws Exception {
 		ApplicationContextGenerator generator = new ApplicationContextGenerator("2.0");
-		String source = "public class Clazz{ private int hidden; public byte b; public byte bv = 5; public AnObject obj;}";
+		String source = "public class Clazz{ private int hidden; public byte b; public byte bv = 5; public AnObject obj; public long num = 56L; public String str = \"foo\";}";
 		StringReader reader = new StringReader(source);
 		generator.addBean(reader);
 		Document document = generator.getDocument();
 
 		NodeList nodeList = (NodeList) xpath.evaluate("/b:beans/bean[1]/property", document, XPathConstants.NODESET);
-		Assert.assertEquals(3, nodeList.getLength());
+		Assert.assertEquals(5, nodeList.getLength());
 		NamedNodeMap attrs = nodeList.item(0).getAttributes();
 		Assert.assertEquals("b", attrs.getNamedItem("name").getNodeValue());
 		Assert.assertEquals("", attrs.getNamedItem("value").getNodeValue());
@@ -146,6 +147,14 @@ public class ApplicationContextGeneratorTest {
 		Assert.assertEquals("obj", attrs.getNamedItem("name").getNodeValue());
 		Assert.assertEquals(null, attrs.getNamedItem("value"));
 		Assert.assertEquals("anObject", attrs.getNamedItem("ref").getNodeValue());
+		attrs = nodeList.item(3).getAttributes();
+		Assert.assertEquals("num", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertEquals("56", attrs.getNamedItem("value").getNodeValue());
+		Assert.assertEquals(null, attrs.getNamedItem("ref"));
+		attrs = nodeList.item(4).getAttributes();
+		Assert.assertEquals("str", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertEquals("foo", attrs.getNamedItem("value").getNodeValue());
+		Assert.assertEquals(null, attrs.getNamedItem("ref"));
 	}
 
 	/**
@@ -173,6 +182,142 @@ public class ApplicationContextGeneratorTest {
 		Assert.assertEquals("bar", attrs.getNamedItem("name").getNodeValue());
 		Assert.assertEquals(null, attrs.getNamedItem("value"));
 		Assert.assertEquals("anObject", attrs.getNamedItem("ref").getNodeValue());
+	}
+
+	/**
+	 * If a property is of type java.util.List, a &lt;list /&gt; child element
+	 * should be added.
+	 * @throws Exception
+	 */
+	@Test
+	public void testListProperty() throws Exception {
+		ApplicationContextGenerator generator = new ApplicationContextGenerator("2.0");
+		String source = "public class Clazz{ public List list1; public void setList2(java.util.List list2){} }";
+		StringReader reader = new StringReader(source);
+		generator.addBean(reader);
+		Document document = generator.getDocument();
+
+		NodeList nodeList = (NodeList) xpath.evaluate("/b:beans/bean[1]/property", document, XPathConstants.NODESET);
+		Assert.assertEquals(2, nodeList.getLength());
+		Node node = nodeList.item(0);
+		NamedNodeMap attrs = node.getAttributes();
+		Assert.assertEquals("list1", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertNull(attrs.getNamedItem("value"));
+		Assert.assertNull(attrs.getNamedItem("ref"));
+		NodeList listNodeList = (NodeList) xpath.evaluate("list", node, XPathConstants.NODESET);
+		Assert.assertEquals(1, listNodeList.getLength());
+		Assert.assertNull(listNodeList.item(0).getFirstChild());
+
+		node = nodeList.item(1);
+		attrs = node.getAttributes();
+		Assert.assertEquals("list2", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertNull(attrs.getNamedItem("value"));
+		Assert.assertNull(attrs.getNamedItem("ref"));
+		listNodeList = (NodeList) xpath.evaluate("list", node, XPathConstants.NODESET);
+		Assert.assertEquals(1, listNodeList.getLength());
+		Assert.assertNull(listNodeList.item(0).getFirstChild());
+	}
+
+	/**
+	 * If a property is of type java.util.Set, a &lt;set /&gt; child element
+	 * should be added.
+	 * @throws Exception
+	 */
+	@Test
+	public void testSetProperty() throws Exception {
+		ApplicationContextGenerator generator = new ApplicationContextGenerator("2.0");
+		String source = "public class Clazz{ public java.util.Set set1; public void setSet2(Set set2){} }";
+		StringReader reader = new StringReader(source);
+		generator.addBean(reader);
+		Document document = generator.getDocument();
+
+		NodeList nodeList = (NodeList) xpath.evaluate("/b:beans/bean[1]/property", document, XPathConstants.NODESET);
+		Assert.assertEquals(2, nodeList.getLength());
+		Node node = nodeList.item(0);
+		NamedNodeMap attrs = node.getAttributes();
+		Assert.assertEquals("set1", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertNull(attrs.getNamedItem("value"));
+		Assert.assertNull(attrs.getNamedItem("ref"));
+		NodeList listNodeList = (NodeList) xpath.evaluate("set", node, XPathConstants.NODESET);
+		Assert.assertEquals(1, listNodeList.getLength());
+		Assert.assertNull(listNodeList.item(0).getFirstChild());
+
+		node = nodeList.item(1);
+		attrs = node.getAttributes();
+		Assert.assertEquals("set2", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertNull(attrs.getNamedItem("value"));
+		Assert.assertNull(attrs.getNamedItem("ref"));
+		listNodeList = (NodeList) xpath.evaluate("set", node, XPathConstants.NODESET);
+		Assert.assertEquals(1, listNodeList.getLength());
+		Assert.assertNull(listNodeList.item(0).getFirstChild());
+	}
+
+	/**
+	 * If a property is of type java.util.Map, a &lt;map /&gt; child element
+	 * should be added.
+	 * @throws Exception
+	 */
+	@Test
+	public void testMapProperty() throws Exception {
+		ApplicationContextGenerator generator = new ApplicationContextGenerator("2.0");
+		String source = "public class Clazz{ public Map map1; public void setMap2(java.util.Map map2){} }";
+		StringReader reader = new StringReader(source);
+		generator.addBean(reader);
+		Document document = generator.getDocument();
+
+		NodeList nodeList = (NodeList) xpath.evaluate("/b:beans/bean[1]/property", document, XPathConstants.NODESET);
+		Assert.assertEquals(2, nodeList.getLength());
+		Node node = nodeList.item(0);
+		NamedNodeMap attrs = node.getAttributes();
+		Assert.assertEquals("map1", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertNull(attrs.getNamedItem("value"));
+		Assert.assertNull(attrs.getNamedItem("ref"));
+		NodeList listNodeList = (NodeList) xpath.evaluate("map", node, XPathConstants.NODESET);
+		Assert.assertEquals(1, listNodeList.getLength());
+		Assert.assertNull(listNodeList.item(0).getFirstChild());
+
+		node = nodeList.item(1);
+		attrs = node.getAttributes();
+		Assert.assertEquals("map2", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertNull(attrs.getNamedItem("value"));
+		Assert.assertNull(attrs.getNamedItem("ref"));
+		listNodeList = (NodeList) xpath.evaluate("map", node, XPathConstants.NODESET);
+		Assert.assertEquals(1, listNodeList.getLength());
+		Assert.assertNull(listNodeList.item(0).getFirstChild());
+	}
+
+	/**
+	 * If a property is of type java.util.Properties, a &lt;props /&gt; child
+	 * element should be added.
+	 * @throws Exception
+	 */
+	@Test
+	public void testPropertiesProperty() throws Exception {
+		ApplicationContextGenerator generator = new ApplicationContextGenerator("2.0");
+		String source = "public class Clazz{ public Properties prop1; public void setProp2(java.util.Properties prop2){} }";
+		StringReader reader = new StringReader(source);
+		generator.addBean(reader);
+		Document document = generator.getDocument();
+
+		NodeList nodeList = (NodeList) xpath.evaluate("/b:beans/bean[1]/property", document, XPathConstants.NODESET);
+		Assert.assertEquals(2, nodeList.getLength());
+		Node node = nodeList.item(0);
+		NamedNodeMap attrs = node.getAttributes();
+		Assert.assertEquals("prop1", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertNull(attrs.getNamedItem("value"));
+		Assert.assertNull(attrs.getNamedItem("ref"));
+		NodeList listNodeList = (NodeList) xpath.evaluate("props", node, XPathConstants.NODESET);
+		Assert.assertEquals(1, listNodeList.getLength());
+		Assert.assertNull(listNodeList.item(0).getFirstChild());
+
+		node = nodeList.item(1);
+		attrs = node.getAttributes();
+		Assert.assertEquals("prop2", attrs.getNamedItem("name").getNodeValue());
+		Assert.assertNull(attrs.getNamedItem("value"));
+		Assert.assertNull(attrs.getNamedItem("ref"));
+		listNodeList = (NodeList) xpath.evaluate("props", node, XPathConstants.NODESET);
+		Assert.assertEquals(1, listNodeList.getLength());
+		Assert.assertNull(listNodeList.item(0).getFirstChild());
 	}
 
 	/**

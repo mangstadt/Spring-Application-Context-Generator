@@ -2,7 +2,7 @@
 
 Generates the bean definitions for a Spring XML application context file from the source code of Java classes.  Run it from the command line:
 
-    java com.mangst.appcontext.ApplicationContextGenerator --source=path/to/src --package=com.example.foo --package=com.example.bar
+    java -jar appcontext.jar --source=path/to/src --package=com.example.foo --package=com.example.bar
     
 It creates:
 
@@ -26,3 +26,17 @@ It creates:
        include "com.foo.bar").
     -h, --help
        Displays this help message.
+
+# Opening in Eclipse
+
+To generate the necessary files needed to open the project in Eclipse, navigate to the project root and run the following Maven command:
+
+    mvn eclipse:eclipse
+
+# How to build
+
+To build the project, navigate to the project root and run the following Maven command:
+
+    mvn clean compile assembly:single
+    
+This will generate a runnable JAR file that contains all dependencies.
